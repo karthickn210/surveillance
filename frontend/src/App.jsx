@@ -1,6 +1,7 @@
 import React from 'react';
 import VideoGrid from './components/VideoGrid';
 import TargetUploader from './components/TargetUploader';
+import AlertFeed from './components/AlertFeed';
 
 function App() {
   return (
@@ -31,15 +32,10 @@ function App() {
             <TargetUploader />
           </div>
 
-          {/* Alerts Feed (Placeholder) */}
-          <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700 h-96 overflow-hidden flex flex-col">
-            <h2 className="text-lg font-semibold mb-3 text-gray-300">Live Alerts</h2>
-            <div className="flex-1 overflow-y-auto space-y-2 text-sm text-gray-400">
-              <div className="p-2 bg-gray-700/50 rounded border-l-2 border-green-500">
-                System initialized.
-              </div>
-              {/* Dynamic alerts would go here */}
-            </div>
+          {/* Alerts Feed */}
+          <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700 h-[600px] overflow-hidden flex flex-col">
+            <h2 className="text-lg font-semibold mb-3 text-gray-300 border-b border-gray-700 pb-2">Live Alerts</h2>
+            <AlertFeed />
           </div>
         </div>
       </main>

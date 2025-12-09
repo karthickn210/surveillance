@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, BackgroundTasks, UploadFile, File, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -8,10 +7,13 @@ import os
 import shutil
 import ssl
 import certifi
+import time
 
 # Fix SSL Certificate Errors on Mac
 os.environ['SSL_CERT_FILE'] = certifi.where()
 ssl._create_default_https_context = ssl._create_unverified_context
+
+from fastapi.staticfiles import StaticFiles
 
 from ml_engine import MLEngine
 from camera_manager import CameraManager
@@ -27,15 +29,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve alert images statically
+os.makedirs("alerts", exist_ok=True)
+app.mount("/alerts", StaticFiles(directory="alerts"), name="alerts")
+
 # Global State
 TARGET_IMAGE_PATH = "target_person.jpg"
 ml_engine = MLEngine()
 # Using 0 as default webcam, and a video file if available for testing 2nd stream
 camera_manager = CameraManager(sources=[0]) 
 
+# In-memory alert history (List of dicts)
+alert_history = []
+
 @app.get("/")
 def read_root():
     return {"status": "Surveillance System Backend Running"}
+
+@app.get("/api/alerts")
+def get_alerts():
+    # Return reverse list (newest first)
+    return alert_history[::-1]
 
 @app.post("/upload_target")
 async def upload_target(file: UploadFile = File(...)):
@@ -54,19 +68,25 @@ async def websocket_endpoint(websocket: WebSocket, camera_id: int):
             frame = camera_manager.get_frame(int(camera_id))
             if frame is not None:
                 # Process Frame with ML Engine
-                processed_frame, alerts = ml_engine.process_frame(frame)
+                # ml_engine now returns structured alert dicts
+                processed_frame, new_alerts = ml_engine.process_frame(frame)
                 
+                # Store new alerts
+                if new_alerts:
+                    for alert in new_alerts:
+                        # Ensure alert has timestamp
+                        if 'timestamp' not in alert:
+                            alert['timestamp'] = time.time()
+                        alert_history.append(alert)
+                    
+                    # Limit history size
+                    if len(alert_history) > 100:
+                         alert_history.pop(0)
+
                 # Encode to JPEG
                 _, buffer = cv2.imencode('.jpg', processed_frame)
                 await websocket.send_bytes(buffer.tobytes())
                 
-                # Send alerts if any (This assumes client can handle mixed messages or separate socket)
-                # For simplicity in this demo, we overlay alerts on the image, 
-                # but we could also send a separate text frame.
-                if alerts:
-                    # In a real app, send JSON with metadata. 
-                    # Here we rely on the visual overlay for speed.
-                    pass 
             await asyncio.sleep(0.01)
     except Exception as e:
         print(f"WebSocket error: {e}")
