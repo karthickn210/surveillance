@@ -33,8 +33,8 @@ class MLEngine:
         Returns: annotated_frame, metadata
         """
         # Track persons (0) and Knives (43)
-        # Note: If using a custom model for guns, add its class ID here.
-        results = self.model.track(frame, persist=True, verbose=False, classes=[0, 43]) 
+        # Lower confidence to 0.15 to catch smaller/occluded weapons
+        results = self.model.track(frame, persist=True, verbose=False, classes=[0, 43], conf=0.15, iou=0.5) 
         
         detections = []
         alerts = []
@@ -44,13 +44,26 @@ class MLEngine:
             for box in results[0].boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 cls = int(box.cls[0])
+                conf = float(box.conf[0]) # Get confidence
                 track_id = int(box.id[0]) if box.id is not None else -1
                 
+                # Debug logging
+                # print(f"DEBUG: Detected Class {cls} with Conf {conf:.2f}")
+
                 # Weapon Detection (Class 43 = Knife)
                 if cls == 43:
-                    alerts.append(f"WEAPON DETECTED! (Knife) at {x1},{y1}")
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
-                    cv2.putText(frame, "WEAPON: KNIFE", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    alert_msg = f"WEAPON DETECTED! (Knife) Conf: {conf:.2f}"
+                    print(f"!!! {alert_msg} !!!") # Print to console for user to see
+                    alerts.append(alert_msg)
+                    
+                    # More prominent visual alert
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 4)
+                    
+                    # Background for text for better readability
+                    label = "WEAPON: KNIFE"
+                    (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+                    cv2.rectangle(frame, (x1, y1 - 25), (x1 + w, y1), (0, 0, 255), -1)
+                    cv2.putText(frame, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
                     continue # Skip person logic for weapons
 
                 # Person Logic
