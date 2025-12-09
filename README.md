@@ -55,3 +55,18 @@ npm run dev
 ## ⚠️ Notes for Testing
 - **Weapon Detection**: Hold up a knife (or image of one) to the webcam. It should save a snapshot to `backend/alerts/` and show up in the "Live Alerts" panel on the right. Click the alert to view the image.
 - **Performance**: Running YOLO tracking + ReID on CPU can be slow. A GPU is recommended for multiple streams.
+
+## 🧠 Improving Weapon Detection (Custom Model)
+
+The default YOLOv8 model only detects "Knives" with limited accuracy and **does not** detect guns. For robust detection:
+
+1.  **Download a specialized model**:
+    - We recommend the **Threat Detection YOLOv8** model (supports Gun, Knife, etc.).
+    - [Download best.pt here](https://huggingface.co/Subh775/Threat-Detection-YOLOv8n/resolve/main/best.pt) (or check the [HuggingFace Page](https://huggingface.co/Subh775/Threat-Detection-YOLOv8n)).
+2.  **Install it**:
+    - Rename the downloaded file to `weapons.pt`.
+    - Place it in the `backend/` folder.
+3.  **Restart**:
+    - Restart the backend (`./start.sh`).
+    - The system will see `weapons.pt`, load it, and automatically detect Guns and Knives!
+
